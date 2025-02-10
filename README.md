@@ -53,7 +53,7 @@ cd RFM-Analysis-Dashboard
 
 ### **📦 Install Dependencies**  
 ```bash
-npm install
+npm install streamlit
 ```
 
 ### **🚀 Run the Application**  
@@ -63,7 +63,7 @@ pip install -r requirements.txt
 
 ### **🚀 Run the Streamlit App**  
 ```bash
-streamlit run app.py
+python -m streamlit run rfm_dashboard.py
 ```
 Open http://localhost:8501 in your browser to access the dashboard.
 
