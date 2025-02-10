@@ -53,7 +53,7 @@ cd RFM-Analysis-Dashboard
 
 ### **📦 Install Dependencies**  
 ```bash
-npm install streamlit
+pip install streamlit
 ```
 
 ### **🚀 Run the Application**  
