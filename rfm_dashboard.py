@@ -180,6 +180,7 @@ st.markdown("""
 <div class='header'>
     <h1>💡InsightSphere RFM</h1>
     <img src='https://img.icons8.com/fluency/48/000000/customer-insight.png'/>
+    <p style="color:purple">RFM stands for Recency, Frequency and Monetary</p>
     <p style="color:purple">Analyze your customer segments based on Recency, Frequency, and Monetary values</p>
 </div>
 """, unsafe_allow_html=True)
