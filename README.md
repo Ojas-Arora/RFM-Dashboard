@@ -34,11 +34,7 @@
 ---  
 
 ## **🛠️ Tech Stack**  
-**Frontend**: React, TypeScript, Tailwind CSS, Recharts  
-**Backend**: Node.js, Express.js  
-**Database**: PostgreSQL / MongoDB  
-**Data Processing**: Pandas, NumPy, Scikit-Learn  
-**Deployment**: Vercel / AWS / Heroku  
+**Python, Streamlit, Pandas, NumPy, Matplotlib, Seaborn, Scikit-Learn**  
 
 ---  
 
@@ -46,9 +42,8 @@
 
 ### **🔧 Prerequisites**  
 Ensure you have the following installed:  
-- Node.js `18.x` or later  
-- npm or yarn  
-- PostgreSQL / MongoDB (for database storage)  
+- Python `3.8+`  
+- pip or conda for package management  
 
 ### **🖥️ Clone the Repository**  
 ```bash
@@ -63,13 +58,15 @@ npm install
 
 ### **🚀 Run the Application**  
 ```bash
-npm run dev
+pip install -r requirements.txt
 ```
-Open `http://localhost:3000` in your browser to access the dashboard.  
 
-### **🗄️ Database Setup**  
-- Configure **database connection** in `.env` file  
-- Run migrations if using **PostgreSQL**  
+### **🚀 Run the Streamlit App**  
+```bash
+streamlit run app.py
+```
+Open http://localhost:8501 in your browser to access the dashboard.
+
 
 ---  
 
