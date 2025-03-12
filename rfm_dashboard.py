@@ -4,6 +4,54 @@ import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Define a function to get translations based on the selected language
+def get_translations(language):
+    translations = {
+        'English': {
+            'title': 'InsightSphere RFM',
+            'theme': 'Theme Settings',
+            'refresh_rate': 'Data Refresh Rate',
+            'notifications': 'Notification Preferences',
+            'language': 'Language Settings'
+        },
+        'Spanish': {
+            'title': 'InsightSphere RFM',
+            'theme': 'Configuración de Tema',
+            'refresh_rate': 'Frecuencia de Actualización de Datos',
+            'notifications': 'Preferencias de Notificación',
+            'language': 'Configuración de Idioma'
+        },
+        'French': {
+            'title': 'InsightSphere RFM',
+            'theme': 'Paramètres de Thème',
+            'refresh_rate': 'Fréquence de Rafraîchissement des Données',
+            'notifications': 'Préférences de Notification',
+            'language': 'Paramètres de Langue'
+        },
+        'German': {
+            'title': 'InsightSphere RFM',
+            'theme': 'Thema Einstellungen',
+            'refresh_rate': 'Datenaktualisierungsrate',
+            'notifications': 'Benachrichtigungseinstellungen',
+            'language': 'Spracheinstellungen'
+        },
+        'Hindi': {
+            'title': 'InsightSphere RFM',
+            'theme': 'थीम सेटिंग्स',
+            'refresh_rate': 'डेटा रीफ्रेश दर',
+            'notifications': 'सूचना प्राथमिकताएँ',
+            'language': 'भाषा सेटिंग्स'
+        },
+        'Punjabi': {
+            'title': 'InsightSphere RFM',
+            'theme': 'ਥੀਮ ਸੈਟਿੰਗਜ਼',
+            'refresh_rate': 'ਡਾਟਾ ਰੀਫ੍ਰੈਸ਼ ਦਰ',
+            'notifications': 'ਸੂਚਨਾ ਪ੍ਰਾਥਮਿਕਤਾਵਾਂ',
+            'language': 'ਭਾਸ਼ਾ ਸੈਟਿੰਗਜ਼'
+        }
+    }
+    return translations.get(language, translations['English'])
+
 # Load data
 file_path = 'rfm_data.csv'  # Change this to the actual path if necessary
 data = pd.read_csv(file_path)
@@ -509,7 +557,7 @@ st.markdown("""
     }
 
     .stats-container .stMetric [data-testid="stMetricDelta"] {
-        color: #2d3748 !important;  /* Dark gray for any delta values */
+        color: red !important;  /* Red color for any delta values */
         font-weight: 600 !important;
     }
 
@@ -537,7 +585,7 @@ st.markdown("""
     }
 
     .stMetric [data-testid="stMetricDelta"] {
-        color: #2d3748 !important;  /* Dark gray for any delta values */
+        color: red !important;  /* Red color for any delta values */
         font-weight: 600 !important;
     }
 
@@ -643,6 +691,20 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         gap: 0.5rem !important;
+    }
+
+    /* Update dark theme background color for better visibility */
+    .stApp {
+        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    }
+
+    .segment, .data-preview-container, .stats-container, .header, .navbar, .nav-item, .nav-logo {
+        color: #1e293b;
+    }
+
+    .stMetric [data-testid="stMetricDelta"] {
+        color: red !important;  /* Red color for any delta values */
+        font-weight: 600 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -797,6 +859,81 @@ analysis_type = st.sidebar.selectbox("Choose Analysis Type:", [
     "Customer Loyalty Trends",
     "Revenue Impact Analysis"
 ])
+
+# Add settings section below analysis options in the sidebar
+st.sidebar.title("Settings")
+
+# Language selection
+st.sidebar.subheader("Select Language")
+language = st.sidebar.selectbox("Language:", ('English', 'Spanish', 'French', 'German', 'Hindi', 'Punjabi'))
+
+# Theme selection
+st.sidebar.subheader("Select Mode")
+theme = st.sidebar.radio("Mode:", ('Light', 'Dark'))
+
+# Update dark theme background color to Aubergine
+new_dark_theme = {
+    'background': 'linear-gradient(135deg, #3b0a45 0%, #4b0e57 100%)',  # Aubergine
+    'text_color': '#e2e8f0'
+}
+
+# Slightly darken the light theme background color
+light_theme = {
+    'background': 'linear-gradient(135deg, #e5e5c4 0%, #e0d68c 100%)',  # Slightly darker beige
+    'text_color': '#1e293b'
+}
+
+# Apply selected theme
+selected_theme = new_dark_theme if theme == 'Dark' else light_theme
+
+# Update CSS dynamically
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background: {selected_theme['background']};
+    }}
+    .segment, .data-preview-container, .stats-container, .header, .navbar, .nav-item, .nav-logo {{
+        color: {selected_theme['text_color']};
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
+# Update page content based on selected language
+translations = get_translations(language)
+
+# Update all text elements with translations
+# st.markdown(f"""
+# <div class='header'>
+#     <h1>✨ {translations['title']}</h1>
+#     <p>{translations['theme']}</p>
+#     <p>{translations['refresh_rate']}</p>
+#     <p>{translations['notifications']}</p>
+#     <p>{translations['language']}</p>
+# </div>
+# """, unsafe_allow_html=True)
+
+# Update navbar with translations
+st.markdown(f"""
+<div class="navbar">
+    <div class="nav-logo">
+        📊 {translations['title']}
+    </div>
+    <div class="nav-items">
+        <a href="#dashboard" class="nav-item">
+            <i class="fas fa-chart-line"></i> {translations['theme']}
+        </a>
+        <a href="#customers" class="nav-item">
+            <i class="fas fa-users"></i> {translations['refresh_rate']}
+        </a>
+        <a href="#revenue" class="nav-item">
+            <i class="fas fa-dollar-sign"></i> {translations['notifications']}
+        </a>
+        <a href="#settings" class="nav-item">
+            <i class="fas fa-cog"></i> {translations['language']}
+        </a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Update all graph layouts with black text and better colors
 def update_graph_layout(fig):
