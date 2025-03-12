@@ -589,7 +589,90 @@ st.markdown("""
         background: linear-gradient(120deg, #34495e 0%, #2980b9 100%) !important;
         color: #f0f4f8 !important;
     }
+
+    /* Navbar Styling */
+    .navbar {
+        background: linear-gradient(120deg, #2c3e50 0%, #3498db 100%);
+        padding: 1rem 2rem;
+        margin-bottom: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .nav-items {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .nav-item {
+        color: white;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.1em;
+        transition: all 0.3s ease;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+    }
+
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .nav-logo {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Top Performing Segments styling */
+    .top-segments-header {
+        color: #000000 !important;
+        font-size: 1.8em !important;
+        font-weight: 600 !important;
+        margin: 1.5rem 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
     </style>
+""", unsafe_allow_html=True)
+
+# Update the navbar to cover the full width and ensure links are functional
+st.markdown("""
+<div class="navbar">
+    <div class="nav-logo">
+        📊 InsightSphere
+    </div>
+    <div class="nav-items">
+        <a href="#dashboard" class="nav-item">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+        <a href="#customers" class="nav-item">
+            <i class="fas fa-users"></i> Customers
+        </a>
+        <a href="#revenue" class="nav-item">
+            <i class="fas fa-dollar-sign"></i> Revenue
+        </a>
+        <a href="#settings" class="nav-item">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Ensure Font Awesome is loaded for icons
+st.markdown("""
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 """, unsafe_allow_html=True)
 
 # Header with enhanced styling
@@ -956,9 +1039,9 @@ elif analysis_type == "Revenue Impact Analysis":
     
     st.plotly_chart(fig_revenue_pie, use_container_width=True)
 
-    # Top customer segments
+    # Top customer segments with updated styling
     top_segments = segment_revenue.nlargest(3, 'Monetary')
-    st.markdown("### 🌟 Top Performing Segments")
+    st.markdown('<h3 class="top-segments-header">🌟 Top Performing Segments</h3>', unsafe_allow_html=True)
     for _, row in top_segments.iterrows():
         st.metric(
             row['RFM_Segment'],
@@ -973,3 +1056,16 @@ st.markdown("""
     <p>We hope this analysis helps you understand your customer segments better and make informed business decisions.</p>
 </div>
 """, unsafe_allow_html=True)
+
+# Add anchors for each section to make links functional
+st.markdown("<a id='dashboard'></a>", unsafe_allow_html=True)
+# Dashboard content here
+
+st.markdown("<a id='customers'></a>", unsafe_allow_html=True)
+# Customers content here
+
+st.markdown("<a id='revenue'></a>", unsafe_allow_html=True)
+# Revenue content here
+
+st.markdown("<a id='settings'></a>", unsafe_allow_html=True)
+# Settings content here
