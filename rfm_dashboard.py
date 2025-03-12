@@ -871,10 +871,10 @@ language = st.sidebar.selectbox("Language:", ('English', 'Spanish', 'French', 'G
 st.sidebar.subheader("Select Mode")
 theme = st.sidebar.radio("Mode:", ('Light', 'Dark'))
 
-# Update dark theme background color to Aubergine
+# Update dark theme background color to Pistachio
 new_dark_theme = {
-    'background': 'linear-gradient(135deg, #3b0a45 0%, #4b0e57 100%)',  # Aubergine
-    'text_color': '#e2e8f0'
+    'background': 'linear-gradient(135deg, #93c572 0%, #a2d149 100%)',  # Pistachio
+    'text_color': '#1e293b'
 }
 
 # Slightly darken the light theme background color
