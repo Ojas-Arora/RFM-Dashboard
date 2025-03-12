@@ -709,8 +709,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Initialize translations based on the selected language
+language = st.sidebar.selectbox("Language:", ('English', 'Spanish', 'French', 'German', 'Hindi', 'Punjabi'))
+translations = get_translations(language)
+
 # Update the navbar to cover the full width and ensure links are functional
-st.markdown("""
+st.markdown(f"""
 <div class="navbar">
     <div class="nav-logo">
         📊 <span style='color: #32CD32;'>RFM Analysis</span>
@@ -728,6 +732,9 @@ st.markdown("""
         <a href="#settings" class="nav-item">
             <i class="fas fa-cog"></i> Settings
         </a>
+        <button class="translate-button nav-item" onclick="toggleTranslate()" fdprocessedid="3fmhjf">
+            🌐
+        </button>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -863,10 +870,6 @@ analysis_type = st.sidebar.selectbox("Choose Analysis Type:", [
 # Add settings section below analysis options in the sidebar
 st.sidebar.title("Settings")
 
-# Language selection
-st.sidebar.subheader("Select Language")
-language = st.sidebar.selectbox("Language:", ('English', 'Spanish', 'French', 'German', 'Hindi', 'Punjabi'))
-
 # Theme selection
 st.sidebar.subheader("Select Mode")
 theme = st.sidebar.radio("Mode:", ('Light', 'Dark'))
@@ -931,6 +934,9 @@ st.markdown(f"""
         <a href="#settings" class="nav-item">
             <i class="fas fa-cog"></i> {translations['language']}
         </a>
+        <button class="translate-button nav-item" onclick="toggleTranslate()" fdprocessedid="3fmhjf">
+            🌐
+        </button>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1206,3 +1212,37 @@ st.markdown("<a id='revenue'></a>", unsafe_allow_html=True)
 
 st.markdown("<a id='settings'></a>", unsafe_allow_html=True)
 # Settings content here
+
+st.markdown("""
+<div id="google_translate_element"></div>
+<script>
+  // Initialize Google Translate
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+      {
+        pageLanguage: "en",
+        includedLanguages: "en,hi,es,fr,de,it,ja,zh-CN",
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false,
+      },
+      "google_translate_element"
+    );
+  }
+
+  // Show or hide the Google Translate options
+  function toggleTranslate() {
+    const translateElement = document.getElementById(
+      "google_translate_element"
+    );
+    if (
+      translateElement.style.display === "none" ||
+      translateElement.style.display === ""
+    ) {
+      translateElement.style.display = "block";
+    } else {
+      translateElement.style.display = "none";
+    }
+  }
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+""", unsafe_allow_html=True)
