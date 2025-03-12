@@ -8,42 +8,42 @@ import streamlit.components.v1 as components
 def get_translations(language):
     translations = {
         'English': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'Theme Settings',
             'refresh_rate': 'Data Refresh Rate',
             'notifications': 'Notification Preferences',
             'language': 'Language Settings'
         },
         'Spanish': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'Configuración de Tema',
             'refresh_rate': 'Frecuencia de Actualización de Datos',
             'notifications': 'Preferencias de Notificación',
             'language': 'Configuración de Idioma'
         },
         'French': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'Paramètres de Thème',
             'refresh_rate': 'Fréquence de Rafraîchissement des Données',
             'notifications': 'Préférences de Notification',
             'language': 'Paramètres de Langue'
         },
         'German': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'Thema Einstellungen',
             'refresh_rate': 'Datenaktualisierungsrate',
             'notifications': 'Benachrichtigungseinstellungen',
             'language': 'Spracheinstellungen'
         },
         'Hindi': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'थीम सेटिंग्स',
             'refresh_rate': 'डेटा रीफ्रेश दर',
             'notifications': 'सूचना प्राथमिकताएँ',
             'language': 'भाषा सेटिंग्स'
         },
         'Punjabi': {
-            'title': 'InsightSphere RFM',
+            'title': 'RFM Analysis',
             'theme': 'ਥੀਮ ਸੈਟਿੰਗਜ਼',
             'refresh_rate': 'ਡਾਟਾ ਰੀਫ੍ਰੈਸ਼ ਦਰ',
             'notifications': 'ਸੂਚਨਾ ਪ੍ਰਾਥਮਿਕਤਾਵਾਂ',
@@ -109,7 +109,7 @@ segment_counts = rfm['RFM_Segment'].value_counts().reset_index()
 segment_counts.columns = ['RFM_Segment', 'Count']
 
 # Streamlit Dashboard
-st.set_page_config(page_title="InsightSphere RFM", page_icon="🌐", layout="wide")
+st.set_page_config(page_title="RFM Analysis", page_icon="🌐", layout="wide")
 
 # Add custom CSS with animations
 st.markdown("""
@@ -713,7 +713,7 @@ st.markdown("""
 st.markdown("""
 <div class="navbar">
     <div class="nav-logo">
-        📊 InsightSphere
+        📊 RFM Analysis
     </div>
     <div class="nav-items">
         <a href="#dashboard" class="nav-item">
@@ -740,7 +740,7 @@ st.markdown("""
 # Header with enhanced styling
 st.markdown("""
 <div class='header'>
-    <h1>✨ InsightSphere RFM</h1>
+    <h1>✨ RFM Analysis</h1>
     <img src='https://img.icons8.com/fluency/96/000000/customer-insight.png'/>
     <p>RFM Analysis Dashboard</p>
     <p>Analyze customer segments based on Recency, Frequency, and Monetary values</p>
