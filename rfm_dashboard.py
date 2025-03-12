@@ -713,7 +713,7 @@ st.markdown("""
 st.markdown("""
 <div class="navbar">
     <div class="nav-logo">
-        📊 RFM Analysis
+        📊 <span style='color: #32CD32;'>RFM Analysis</span>
     </div>
     <div class="nav-items">
         <a href="#dashboard" class="nav-item">
@@ -740,7 +740,7 @@ st.markdown("""
 # Header with enhanced styling
 st.markdown("""
 <div class='header'>
-    <h1>✨ RFM Analysis</h1>
+    <h1>✨ <span style='color: #32CD32;'>RFM Analysis</span></h1>
     <img src='https://img.icons8.com/fluency/96/000000/customer-insight.png'/>
     <p>RFM Analysis Dashboard</p>
     <p>Analyze customer segments based on Recency, Frequency, and Monetary values</p>
@@ -916,7 +916,7 @@ translations = get_translations(language)
 st.markdown(f"""
 <div class="navbar">
     <div class="nav-logo">
-        📊 {translations['title']}
+        📊 <span style='color: #32CD32;'>RFM Analysis</span>
     </div>
     <div class="nav-items">
         <a href="#dashboard" class="nav-item">
