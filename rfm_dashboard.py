@@ -18,7 +18,7 @@ if 'current_page' not in st.session_state:
 # Navigation function
 def show_navigation():
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["RFM Analysis", "Dashboard"])
+    page = st.sidebar.radio("Go to", ["RFM Analysis", "Dashboard", "Customers", "Revenue"])
     st.session_state.current_page = page
 
 # Dashboard page
@@ -1372,6 +1372,203 @@ def show_rfm_analysis():
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     """, unsafe_allow_html=True)
 
+# Customers Analysis page
+def show_customers_analysis():
+    st.title("👥 Customer Analysis")
+    
+    # Load the data
+    df = pd.read_csv('rfm_data.csv')
+    df['PurchaseDate'] = pd.to_datetime(df['PurchaseDate'])
+    
+    # Calculate customer metrics
+    customer_metrics = df.groupby('CustomerID').agg({
+        'OrderID': 'count',
+        'TransactionAmount': 'sum',
+        'PurchaseDate': lambda x: (df['PurchaseDate'].max() - x.max()).days
+    }).reset_index()
+    
+    customer_metrics.columns = ['CustomerID', 'Total_Orders', 'Total_Spent', 'Days_Since_Last_Purchase']
+    
+    # Create three columns for key metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            label="Total Customers",
+            value=f"{len(customer_metrics):,}",
+            delta=f"{len(customer_metrics[customer_metrics['Days_Since_Last_Purchase'] <= 30])} active customers"
+        )
+    
+    with col2:
+        avg_orders = customer_metrics['Total_Orders'].mean()
+        st.metric(
+            label="Average Orders per Customer",
+            value=f"{avg_orders:.1f}",
+            delta=f"{((customer_metrics['Total_Orders'] > avg_orders).mean() * 100):.1f}% above average"
+        )
+    
+    with col3:
+        avg_spent = customer_metrics['Total_Spent'].mean()
+        st.metric(
+            label="Average Customer Value",
+            value=f"${avg_spent:,.2f}",
+            delta=f"{((customer_metrics['Total_Spent'] > avg_spent).mean() * 100):.1f}% above average"
+        )
+    
+    # Customer Segments Analysis
+    st.subheader("Customer Segments Analysis")
+    
+    # Define customer segments based on spending
+    customer_metrics['Segment'] = pd.qcut(
+        customer_metrics['Total_Spent'],
+        q=4,
+        labels=['Bronze', 'Silver', 'Gold', 'Platinum']
+    )
+    
+    # Create two columns for charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Customer segment distribution
+        segment_counts = customer_metrics['Segment'].value_counts()
+        fig = px.pie(
+            values=segment_counts.values,
+            names=segment_counts.index,
+            title='Customer Distribution by Segment'
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Average value by segment
+        segment_avg = customer_metrics.groupby('Segment')['Total_Spent'].mean()
+        fig = px.bar(
+            x=segment_avg.index,
+            y=segment_avg.values,
+            title='Average Customer Value by Segment'
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Customer Activity Timeline
+    st.subheader("Customer Activity Timeline")
+    
+    # Monthly customer activity
+    monthly_activity = df.groupby(df['PurchaseDate'].dt.strftime('%Y-%m')).agg({
+        'CustomerID': 'nunique',
+        'OrderID': 'count',
+        'TransactionAmount': 'sum'
+    }).reset_index()
+    
+    monthly_activity.columns = ['Month', 'Active_Customers', 'Total_Orders', 'Total_Revenue']
+    
+    fig = px.line(
+        monthly_activity,
+        x='Month',
+        y=['Active_Customers', 'Total_Orders'],
+        title='Monthly Customer Activity',
+        markers=True
+    )
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Top Customers Table
+    st.subheader("Top 10 Customers")
+    top_customers = customer_metrics.nlargest(10, 'Total_Spent')
+    st.dataframe(top_customers)
+
+# Revenue Analysis page
+def show_revenue_analysis():
+    st.title("💰 Revenue Analysis")
+    
+    # Load the data
+    df = pd.read_csv('rfm_data.csv')
+    df['PurchaseDate'] = pd.to_datetime(df['PurchaseDate'])
+    
+    # Calculate revenue metrics
+    revenue_metrics = df.groupby(df['PurchaseDate'].dt.strftime('%Y-%m')).agg({
+        'TransactionAmount': ['sum', 'mean', 'count']
+    }).reset_index()
+    
+    revenue_metrics.columns = ['Month', 'Total_Revenue', 'Average_Order_Value', 'Number_of_Orders']
+    
+    # Create three columns for key metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        total_revenue = df['TransactionAmount'].sum()
+        st.metric(
+            label="Total Revenue",
+            value=f"${total_revenue:,.2f}",
+            delta=f"{((revenue_metrics['Total_Revenue'].iloc[-1] > revenue_metrics['Total_Revenue'].iloc[-2]).astype(int) * 100)}% vs last month"
+        )
+    
+    with col2:
+        avg_order_value = df['TransactionAmount'].mean()
+        st.metric(
+            label="Average Order Value",
+            value=f"${avg_order_value:,.2f}",
+            delta=f"{((revenue_metrics['Average_Order_Value'].iloc[-1] > revenue_metrics['Average_Order_Value'].iloc[-2]).astype(int) * 100)}% vs last month"
+        )
+    
+    with col3:
+        total_orders = len(df)
+        st.metric(
+            label="Total Orders",
+            value=f"{total_orders:,}",
+            delta=f"{((revenue_metrics['Number_of_Orders'].iloc[-1] > revenue_metrics['Number_of_Orders'].iloc[-2]).astype(int) * 100)}% vs last month"
+        )
+    
+    # Revenue Trends
+    st.subheader("Revenue Trends")
+    
+    # Create two columns for charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Monthly revenue trend
+        fig = px.line(
+            revenue_metrics,
+            x='Month',
+            y='Total_Revenue',
+            title='Monthly Revenue Trend',
+            markers=True
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Average order value trend
+        fig = px.line(
+            revenue_metrics,
+            x='Month',
+            y='Average_Order_Value',
+            title='Average Order Value Trend',
+            markers=True
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Revenue Distribution
+    st.subheader("Revenue Distribution")
+    
+    # Daily revenue distribution
+    daily_revenue = df.groupby(df['PurchaseDate'].dt.date)['TransactionAmount'].sum().reset_index()
+    
+    fig = px.histogram(
+        daily_revenue,
+        x='TransactionAmount',
+        nbins=30,
+        title='Daily Revenue Distribution'
+    )
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Top Revenue Days
+    st.subheader("Top 10 Revenue Days")
+    top_days = daily_revenue.nlargest(10, 'TransactionAmount')
+    st.dataframe(top_days)
+
 # Main execution
 if __name__ == "__main__":
     # Show navigation in sidebar
@@ -1380,5 +1577,9 @@ if __name__ == "__main__":
     # Show appropriate page based on selection
     if st.session_state.current_page == "Dashboard":
         show_dashboard()
+    elif st.session_state.current_page == "Customers":
+        show_customers_analysis()
+    elif st.session_state.current_page == "Revenue":
+        show_revenue_analysis()
     else:
         show_rfm_analysis()
