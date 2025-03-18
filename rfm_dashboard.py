@@ -1,4 +1,116 @@
-############################
+import streamlit as st
+import time
+import streamlit.components.v1 as components
+
+# ---- PAGE CONFIG ----
+st.set_page_config(page_title="Animated Navbar", page_icon="🌟", layout="wide")
+
+# ---- CUSTOM CSS & JS ----
+custom_css = """
+    <style>
+        /* Sidebar styling */
+        [data-testid="stSidebar"] {
+            width: 60px !important;
+            transition: width 0.5s ease-in-out;
+        }
+        [data-testid="stSidebar"]:hover {
+            width: 250px !important;
+        }
+        /* Navbar items */
+        .nav-item {
+            padding: 10px;
+            font-size: 18px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+        .nav-item:hover {
+            transform: scale(1.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .nav-item:active {
+            transform: scale(0.9);
+        }
+        .bubble-effect {
+            animation: pop 0.3s ease-in-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+"""
+
+custom_js = """
+    <script>
+        function playPopSound() {
+            var audio = new Audio("https://www.fesliyanstudios.com/play-mp3/4387");
+            audio.play();
+        }
+        function applyBubbleEffect(id) {
+            document.getElementById(id).classList.add("bubble-effect");
+            setTimeout(() => { document.getElementById(id).classList.remove("bubble-effect"); }, 300);
+        }
+    </script>
+"""
+
+# Inject CSS & JS
+st.markdown(custom_css, unsafe_allow_html=True)
+components.html(custom_js, height=0)
+
+# ---- NAVIGATION ----
+st.sidebar.markdown("<h2 style='color:white; text-align:center;'>🌟 Navigation</h2>", unsafe_allow_html=True)
+
+nav_options = ["🏠 Home", "📊 Insights", "📈 Visuals", "⚙️ Settings"]
+selected_page = st.sidebar.radio("", nav_options)
+
+# Play pop sound & animate on selection
+if selected_page:
+    st.sidebar.markdown(f"""
+        <script>
+            playPopSound();
+            applyBubbleEffect('{selected_page}');
+        </script>
+    """, unsafe_allow_html=True)
+
+# ---- PAGE TRANSITIONS ----
+st.markdown(
+    """
+    <style>
+        .fade-in {
+            animation: fadeIn 0.7s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
+
+# ---- PAGE CONTENT ----
+if selected_page == "🏠 Home":
+    st.title("🏠 Welcome to the Home Page!")
+    st.write("This is your main dashboard with cool animations.")
+
+elif selected_page == "📊 Insights":
+    st.title("📊 Insights Page")
+    st.write("Explore your data insights here.")
+
+elif selected_page == "📈 Visuals":
+    st.title("📈 Visualizations")
+    st.write("Interactive charts and graphs will be here.")
+
+elif selected_page == "⚙️ Settings":
+    st.title("⚙️ Settings")
+    st.write("Customize your dashboard experience.")
+
+st.markdown("</div>", unsafe_allow_html=True)  # End fade-in effect
+
 import pandas as pd
 import datetime as dt
 import plotly.express as px
