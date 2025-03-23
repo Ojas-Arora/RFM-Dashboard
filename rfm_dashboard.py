@@ -1,116 +1,3 @@
-import streamlit as st
-import time
-import streamlit.components.v1 as components
-
-# ---- PAGE CONFIG ----
-st.set_page_config(page_title="Animated Navbar", page_icon="🌟", layout="wide")
-
-# ---- CUSTOM CSS & JS ----
-custom_css = """
-    <style>
-        /* Sidebar styling */
-        [data-testid="stSidebar"] {
-            width: 60px !important;
-            transition: width 0.5s ease-in-out;
-        }
-        [data-testid="stSidebar"]:hover {
-            width: 250px !important;
-        }
-        /* Navbar items */
-        .nav-item {
-            padding: 10px;
-            font-size: 18px;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease-in-out;
-        }
-        .nav-item:hover {
-            transform: scale(1.1);
-            transition: all 0.3s ease-in-out;
-        }
-        .nav-item:active {
-            transform: scale(0.9);
-        }
-        .bubble-effect {
-            animation: pop 0.3s ease-in-out;
-        }
-        @keyframes pop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-    </style>
-"""
-
-custom_js = """
-    <script>
-        function playPopSound() {
-            var audio = new Audio("https://www.fesliyanstudios.com/play-mp3/4387");
-            audio.play();
-        }
-        function applyBubbleEffect(id) {
-            document.getElementById(id).classList.add("bubble-effect");
-            setTimeout(() => { document.getElementById(id).classList.remove("bubble-effect"); }, 300);
-        }
-    </script>
-"""
-
-# Inject CSS & JS
-st.markdown(custom_css, unsafe_allow_html=True)
-components.html(custom_js, height=0)
-
-# ---- NAVIGATION ----
-st.sidebar.markdown("<h2 style='color:white; text-align:center;'>🌟 Navigation</h2>", unsafe_allow_html=True)
-
-nav_options = ["🏠 Home", "📊 Insights", "📈 Visuals", "⚙️ Settings"]
-selected_page = st.sidebar.radio("", nav_options)
-
-# Play pop sound & animate on selection
-if selected_page:
-    st.sidebar.markdown(f"""
-        <script>
-            playPopSound();
-            applyBubbleEffect('{selected_page}');
-        </script>
-    """, unsafe_allow_html=True)
-
-# ---- PAGE TRANSITIONS ----
-st.markdown(
-    """
-    <style>
-        .fade-in {
-            animation: fadeIn 0.7s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
-
-# ---- PAGE CONTENT ----
-if selected_page == "🏠 Home":
-    st.title("🏠 Welcome to the Home Page!")
-    st.write("This is your main dashboard with cool animations.")
-
-elif selected_page == "📊 Insights":
-    st.title("📊 Insights Page")
-    st.write("Explore your data insights here.")
-
-elif selected_page == "📈 Visuals":
-    st.title("📈 Visualizations")
-    st.write("Interactive charts and graphs will be here.")
-
-elif selected_page == "⚙️ Settings":
-    st.title("⚙️ Settings")
-    st.write("Customize your dashboard experience.")
-
-st.markdown("</div>", unsafe_allow_html=True)  # End fade-in effect
-
 import pandas as pd
 import datetime as dt
 import plotly.express as px
@@ -124,15 +11,117 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom CSS for animations
+st.markdown("""
+<style>
+    .nav-link {
+        padding: 12px 20px;
+        margin: 8px 0;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: block;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+        padding-left: 30px;
+        transform: scale(1.02);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav-link.active {
+        background: rgba(255, 255, 255, 0.25);
+        font-weight: bold;
+        border-left: 4px solid #ff4b4b;
+    }
+    
+    .main-content {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .nav-icon {
+        display: inline-block;
+        margin-right: 8px;
+        transition: transform 0.3s ease;
+    }
+    
+    .nav-link:hover .nav-icon {
+        transform: scale(1.2);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Add click sound JavaScript
+st.markdown("""
+<script>
+    const audio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//NQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAECIjk4EAAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV");
+    
+    function playClickSound() {
+        audio.currentTime = 0;
+        audio.play().catch(e => {});
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', playClickSound);
+        });
+    });
+</script>
+""", unsafe_allow_html=True)
+
 # Initialize session state for navigation
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "RFM Analysis"
 
-# Navigation function
-def show_navigation():
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["RFM Analysis", "Dashboard", "Customers", "Revenue"])
+def change_page(page):
     st.session_state.current_page = page
+
+# Enhanced navigation function
+def show_navigation():
+    st.sidebar.title("📱 Navigation")
+    
+    nav_items = {
+        "RFM Analysis": "📊",
+        "Dashboard": "📈",
+        "Customers": "👥",
+        "Revenue": "💰"
+    }
+    
+    for page, icon in nav_items.items():
+        # Using columns for better click detection
+        col1, col2 = st.sidebar.columns([1, 0.1])
+        with col1:
+            if st.button(
+                f"{icon} {page}",
+                key=f"nav_{page}",
+                help=f"Navigate to {page}",
+                use_container_width=True,
+                on_click=change_page,
+                args=(page,)
+            ):
+                pass
+        
+        # Add the styling for the active state
+        if st.session_state.current_page == page:
+            st.sidebar.markdown(f"""
+                <style>
+                    div[data-testid="stButton"] button[kind="secondary"] {{
+                        background-color: rgba(255, 255, 255, 0.25);
+                        border-left: 4px solid #ff4b4b;
+                        font-weight: bold;
+                    }}
+                </style>
+                """, unsafe_allow_html=True)
 
 # Dashboard page
 def show_dashboard():
