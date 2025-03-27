@@ -3,6 +3,14 @@ import datetime as dt
 import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, mean_squared_error, classification_report
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Set page configuration
 st.set_page_config(
@@ -94,7 +102,8 @@ def show_navigation():
         "RFM Analysis": "📊",
         "Dashboard": "📈",
         "Customers": "👥",
-        "Revenue": "💰"
+        "Revenue": "💰",
+        "ML Analysis": "🤖"
     }
     
     for page, icon in nav_items.items():
@@ -1103,7 +1112,7 @@ def show_rfm_analysis():
 
     # Update dark theme background color to Pistachio
     new_dark_theme = {
-        'background': 'black',  # Pistachio
+        'background': 'linear-gradient(135deg, #93c572 0%, #a2d149 100%)',  # Pistachio
         'text_color': '#1e293b'
     }
 
@@ -1671,17 +1680,588 @@ def show_revenue_analysis():
     top_days = daily_revenue.nlargest(10, 'TransactionAmount')
     st.dataframe(top_days)
 
+# ML Analysis page
+def show_ml_analysis():
+    st.title("🤖 Machine Learning Analysis")
+    
+    # Add custom CSS with animations
+    st.markdown("""
+        <style>
+        .ml-container {
+            animation: fadeIn 0.8s ease-out;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .ml-header {
+            color: #4B0082;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #4B0082;
+            padding-bottom: 0.5rem;
+        }
+        
+        .info-box {
+            background: rgba(75, 0, 130, 0.05);
+            border-left: 4px solid #4B0082;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 5px 5px 0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Load data
+    file_path = 'rfm_data.csv'
+    try:
+        data = pd.read_csv(file_path)
+    except FileNotFoundError:
+        st.error("Data file not found. Please make sure 'rfm_data.csv' exists in the current directory.")
+        return
+    
+    # Convert PurchaseDate to datetime
+    data['PurchaseDate'] = pd.to_datetime(data['PurchaseDate'])
+    
+    # Define reference date for recency calculation
+    reference_date = dt.datetime(2023, 7, 1)
+    
+    # Calculate RFM metrics
+    rfm = data.groupby('CustomerID').agg({
+        'PurchaseDate': lambda x: (reference_date - x.max()).days,
+        'OrderID': 'count',
+        'TransactionAmount': 'sum'
+    }).reset_index()
+    
+    rfm.columns = ['CustomerID', 'Recency', 'Frequency', 'Monetary']
+    
+    # Filter out non-positive monetary values
+    rfm = rfm[rfm['Monetary'] > 0]
+    
+    # Add additional features for ML
+    customer_data = data.groupby('CustomerID').agg({
+        'PurchaseDate': [
+            lambda x: (x.max() - x.min()).days if len(x) > 1 else 0,  # Customer tenure
+            'count'  # Total transactions
+        ],
+        'TransactionAmount': [
+            'mean',  # Average order value
+            'std',   # Variability in spending
+            'sum'    # Total spending
+        ],
+        'ProductInformation': [
+            lambda x: x.nunique(),  # Product variety
+            'count'  # Total products purchased
+        ]
+    }).reset_index()
+    
+    # Flatten the column names
+    customer_data.columns = ['CustomerID', 'Tenure', 'TransactionCount', 
+                            'AvgOrderValue', 'SpendingStd', 'TotalSpending',
+                            'ProductVariety', 'TotalProducts']
+    
+    # Replace NaN values in SpendingStd with 0 (for customers with only one transaction)
+    customer_data['SpendingStd'].fillna(0, inplace=True)
+    
+    # Merge with RFM data
+    ml_data = pd.merge(rfm, customer_data, on='CustomerID')
+    
+    # Create tabs for different ML analyses
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Advanced Segmentation", 
+        "Churn Prediction", 
+        "Customer Lifetime Value", 
+        "Next Purchase Prediction"
+    ])
+    
+    with tab1:
+        st.markdown('<h3 class="ml-header">Advanced Customer Segmentation with K-Means</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        K-Means clustering provides a more data-driven approach to customer segmentation compared to rule-based RFM segmentation.
+        This can reveal natural groupings in your customer base that might not be apparent with traditional methods.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Features for clustering
+        cluster_features = ['Recency', 'Frequency', 'Monetary', 'Tenure', 'ProductVariety']
+        
+        # Allow user to select features
+        selected_features = st.multiselect(
+            "Select features for clustering:",
+            options=cluster_features,
+            default=cluster_features
+        )
+        
+        if not selected_features:
+            st.warning("Please select at least one feature for clustering.")
+        else:
+            # Number of clusters
+            n_clusters = st.slider("Number of clusters:", min_value=2, max_value=10, value=5)
+            
+            # Prepare data for clustering
+            X = ml_data[selected_features].copy()
+            
+            # Scale the data
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            
+            # Apply K-Means clustering
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            ml_data['Cluster'] = kmeans.fit_predict(X_scaled)
+            
+            # Display cluster centers
+            cluster_centers = pd.DataFrame(
+                scaler.inverse_transform(kmeans.cluster_centers_),
+                columns=selected_features
+            )
+            
+            st.subheader("Cluster Centers")
+            st.dataframe(cluster_centers.style.format("{:.2f}"))
+            
+            # Visualize clusters
+            if len(selected_features) >= 2:
+                st.subheader("Cluster Visualization")
+                
+                # Allow user to select dimensions for visualization
+                x_axis = st.selectbox("X-axis:", options=selected_features, index=0)
+                y_axis = st.selectbox("Y-axis:", options=selected_features, index=1)
+                
+                # Create scatter plot
+                fig = px.scatter(
+                    ml_data, x=x_axis, y=y_axis, color='Cluster',
+                    hover_data=['CustomerID', 'Recency', 'Frequency', 'Monetary'],
+                    title=f'Customer Clusters based on {x_axis} and {y_axis}',
+                    color_continuous_scale=px.colors.qualitative.G10
+                )
+                
+                # Add cluster centers to the plot
+                for i, center in enumerate(cluster_centers[[x_axis, y_axis]].values):
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[center[0]], y=[center[1]],
+                            mode='markers',
+                            marker=dict(
+                                symbol='star',
+                                size=15,
+                                color='black',
+                                line=dict(width=2)
+                            ),
+                            name=f'Center {i}'
+                        )
+                    )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # 3D visualization if 3 or more features are selected
+                if len(selected_features) >= 3:
+                    z_axis = st.selectbox("Z-axis (for 3D):", options=selected_features, index=2)
+                    
+                    fig_3d = px.scatter_3d(
+                        ml_data, x=x_axis, y=y_axis, z=z_axis,
+                        color='Cluster',
+                        hover_data=['CustomerID', 'Recency', 'Frequency', 'Monetary'],
+                        title=f'3D Customer Clusters based on {x_axis}, {y_axis}, and {z_axis}'
+                    )
+                    
+                    st.plotly_chart(fig_3d, use_container_width=True)
+            
+            # Cluster analysis
+            st.subheader("Cluster Analysis")
+            
+            # Calculate average metrics for each cluster
+            cluster_analysis = ml_data.groupby('Cluster').agg({
+                'Recency': 'mean',
+                'Frequency': 'mean',
+                'Monetary': 'mean',
+                'Tenure': 'mean',
+                'ProductVariety': 'mean',
+                'CustomerID': 'count'
+            }).reset_index()
+            
+            cluster_analysis.rename(columns={'CustomerID': 'Count'}, inplace=True)
+            
+            # Display cluster analysis
+            st.dataframe(cluster_analysis.style.format({
+                'Recency': '{:.1f}',
+                'Frequency': '{:.1f}',
+                'Monetary': '${:.2f}',
+                'Tenure': '{:.1f}',
+                'ProductVariety': '{:.1f}',
+                'Count': '{:.0f}'
+            }))
+            
+            # Cluster distribution
+            fig = px.pie(
+                cluster_analysis, values='Count', names='Cluster',
+                title='Distribution of Customers Across Clusters'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Download clustered data
+            st.download_button(
+                label="Download Clustered Data",
+                data=ml_data.to_csv(index=False).encode('utf-8'),
+                file_name="customer_clusters.csv",
+                mime="text/csv"
+            )
+    
+    with tab2:
+        st.markdown('<h3 class="ml-header">Customer Churn Prediction</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        Churn prediction helps identify customers who are likely to stop doing business with you.
+        By identifying these customers early, you can take proactive measures to retain them.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Define churn based on recency
+        churn_threshold = st.slider(
+            "Define churn threshold (days since last purchase):",
+            min_value=30, max_value=365, value=180, step=30
+        )
+        
+        # Create churn label
+        ml_data['Churned'] = (ml_data['Recency'] > churn_threshold).astype(int)
+        
+        # Display churn distribution
+        churn_counts = ml_data['Churned'].value_counts().reset_index()
+        churn_counts.columns = ['Status', 'Count']
+        churn_counts['Status'] = churn_counts['Status'].map({0: 'Active', 1: 'Churned'})
+        
+        fig = px.pie(
+            churn_counts,
+            values='Count',
+            names='Status',
+            title=f'Customer Churn Distribution (Threshold: {churn_threshold} days)',
+            color_discrete_sequence=['#3CB371', '#FF6347']
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Features for churn prediction
+        churn_features = [
+            'Frequency', 'Monetary', 'Tenure', 'AvgOrderValue', 
+            'SpendingStd', 'ProductVariety', 'TotalProducts'
+        ]
+        
+        # Train-test split
+        X = ml_data[churn_features]
+        y = ml_data['Churned']
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, random_state=42
+        )
+        
+        # Train Random Forest model
+        if st.button("Train Churn Prediction Model"):
+            with st.spinner("Training model..."):
+                # Scale features
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_test_scaled = scaler.transform(X_test)
+                
+                # Train model
+                model = RandomForestClassifier(n_estimators=100, random_state=42)
+                model.fit(X_train_scaled, y_train)
+                
+                # Make predictions
+                y_pred = model.predict(X_test_scaled)
+                
+                # Evaluate model
+                accuracy = accuracy_score(y_test, y_pred)
+                report = classification_report(y_test, y_pred, output_dict=True)
+                
+                # Display results
+                st.success(f"Model trained successfully! Accuracy: {accuracy:.2%}")
+                
+                # Display classification report
+                st.subheader("Model Performance")
+                report_df = pd.DataFrame(report).transpose()
+                st.dataframe(report_df.style.format({
+                    'precision': '{:.2%}',
+                    'recall': '{:.2%}',
+                    'f1-score': '{:.2%}',
+                    'support': '{:.0f}'
+                }))
+                
+                # Feature importance
+                feature_importance = pd.DataFrame({
+                    'Feature': churn_features,
+                    'Importance': model.feature_importances_
+                }).sort_values('Importance', ascending=False)
+                
+                st.subheader("Feature Importance")
+                fig = px.bar(
+                    feature_importance, x='Importance', y='Feature',
+                    orientation='h', title='Feature Importance for Churn Prediction'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Predict churn probability for all customers
+                ml_data['Churn_Probability'] = model.predict_proba(scaler.transform(ml_data[churn_features]))[:, 1]
+                
+                # Display customers with highest churn risk
+                st.subheader("Top 10 Customers at Risk of Churning")
+                high_risk = ml_data[ml_data['Churned'] == 0].nlargest(10, 'Churn_Probability')[
+                    ['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Churn_Probability']
+                ]
+                st.dataframe(high_risk.style.format({
+                    'Recency': '{:.0f}',
+                    'Frequency': '{:.0f}',
+                    'Monetary': '${:.2f}',
+                    'Churn_Probability': '{:.2%}'
+                }))
+                
+                # Download churn predictions
+                st.download_button(
+                    label="Download Churn Predictions",
+                    data=ml_data[['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Churned', 'Churn_Probability']].to_csv(index=False).encode('utf-8'),
+                    file_name="churn_predictions.csv",
+                    mime="text/csv"
+                )
+    
+    with tab3:
+        st.markdown('<h3 class="ml-header">Customer Lifetime Value Prediction</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        Customer Lifetime Value (CLV) prediction estimates the total revenue a business can expect from a customer throughout their relationship.
+        This helps prioritize marketing efforts and resource allocation.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Features for CLV prediction
+        clv_features = [
+            'Recency', 'Frequency', 'Tenure', 'AvgOrderValue', 
+            'SpendingStd', 'ProductVariety', 'TotalProducts'
+        ]
+        
+        # Target variable: Monetary (as a proxy for CLV)
+        X = ml_data[clv_features]
+        y = ml_data['Monetary']
+        
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, random_state=42
+        )
+        
+        # Train Random Forest model
+        if st.button("Train CLV Prediction Model"):
+            with st.spinner("Training model..."):
+                # Scale features
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_test_scaled = scaler.transform(X_test)
+                
+                # Train model
+                model = RandomForestRegressor(n_estimators=100, random_state=42)
+                model.fit(X_train_scaled, y_train)
+                
+                # Make predictions
+                y_pred = model.predict(X_test_scaled)
+                
+                # Evaluate model
+                mse = mean_squared_error(y_test, y_pred)
+                rmse = np.sqrt(mse)
+                
+                # Display results
+                st.success(f"Model trained successfully! RMSE: ${rmse:.2f}")
+                
+                # Feature importance
+                feature_importance = pd.DataFrame({
+                    'Feature': clv_features,
+                    'Importance': model.feature_importances_
+                }).sort_values('Importance', ascending=False)
+                
+                st.subheader("Feature Importance")
+                fig = px.bar(
+                    feature_importance, x='Importance', y='Feature',
+                    orientation='h', title='Feature Importance for CLV Prediction'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Predict CLV for all customers
+                ml_data['Predicted_CLV'] = model.predict(scaler.transform(ml_data[clv_features]))
+                
+                # Actual vs Predicted CLV
+                fig = px.scatter(
+                    ml_data, x='Monetary', y='Predicted_CLV',
+                    hover_data=['CustomerID', 'Recency', 'Frequency'],
+                    title='Actual vs Predicted Customer Lifetime Value'
+                )
+                
+                # Add diagonal line (perfect prediction)
+                max_value = max(ml_data['Monetary'].max(), ml_data['Predicted_CLV'].max())
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0, max_value], y=[0, max_value],
+                        mode='lines', line=dict(dash='dash', color='red'),
+                        name='Perfect Prediction'
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Display top customers by predicted CLV
+                st.subheader("Top 10 Customers by Predicted CLV")
+                top_clv = ml_data.nlargest(10, 'Predicted_CLV')[
+                    ['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Predicted_CLV']
+                ]
+                st.dataframe(top_clv.style.format({
+                    'Recency': '{:.0f}',
+                    'Frequency': '{:.0f}',
+                    'Monetary': '${:.2f}',
+                    'Predicted_CLV': '${:.2f}'
+                }))
+                
+                # Download CLV predictions
+                st.download_button(
+                    label="Download CLV Predictions",
+                    data=ml_data[['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Predicted_CLV']].to_csv(index=False).encode('utf-8'),
+                    file_name="clv_predictions.csv",
+                    mime="text/csv"
+                )
+    
+    with tab4:
+        st.markdown('<h3 class="ml-header">Next Purchase Prediction</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        Next purchase prediction estimates when a customer is likely to make their next purchase.
+        This helps in timing marketing campaigns and personalized offers.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Calculate days between purchases for each customer
+        purchase_intervals = data.sort_values(['CustomerID', 'PurchaseDate'])
+        purchase_intervals['PrevPurchaseDate'] = purchase_intervals.groupby('CustomerID')['PurchaseDate'].shift(1)
+        purchase_intervals['DaysBetweenPurchases'] = (purchase_intervals['PurchaseDate'] - purchase_intervals['PrevPurchaseDate']).dt.days
+        
+        # Filter out rows with NaN (first purchase for each customer)
+        purchase_intervals = purchase_intervals.dropna(subset=['DaysBetweenPurchases'])
+        
+        # Calculate average purchase interval for each customer
+        avg_intervals = purchase_intervals.groupby('CustomerID')['DaysBetweenPurchases'].mean().reset_index()
+        avg_intervals.columns = ['CustomerID', 'AvgPurchaseInterval']
+        
+        # Merge with ml_data
+        ml_data = pd.merge(ml_data, avg_intervals, on='CustomerID', how='left')
+        ml_data['AvgPurchaseInterval'].fillna(ml_data['Recency'], inplace=True)
+        
+        # Features for next purchase prediction
+        next_purchase_features = [
+            'Recency', 'Frequency', 'AvgOrderValue', 
+            'Tenure', 'ProductVariety', 'AvgPurchaseInterval'
+        ]
+        
+        # Target: Average purchase interval
+        X = ml_data[next_purchase_features]
+        y = ml_data['AvgPurchaseInterval']
+        
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, random_state=42
+        )
+        
+        # Train model
+        if st.button("Train Next Purchase Prediction Model"):
+            with st.spinner("Training model..."):
+                # Scale features
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_test_scaled = scaler.transform(X_test)
+                
+                # Train model
+                model = RandomForestRegressor(n_estimators=100, random_state=42)
+                model.fit(X_train_scaled, y_train)
+                
+                # Make predictions
+                y_pred = model.predict(X_test_scaled)
+                
+                # Evaluate model
+                mse = mean_squared_error(y_test, y_pred)
+                rmse = np.sqrt(mse)
+                
+                # Display results
+                st.success(f"Model trained successfully! RMSE: {rmse:.2f} days")
+                
+                # Feature importance
+                feature_importance = pd.DataFrame({
+                    'Feature': next_purchase_features,
+                    'Importance': model.feature_importances_
+                }).sort_values('Importance', ascending=False)
+                
+                st.subheader("Feature Importance")
+                fig = px.bar(
+                    feature_importance, x='Importance', y='Feature',
+                    orientation='h', title='Feature Importance for Next Purchase Prediction'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Predict next purchase interval for all customers
+                ml_data['PredictedPurchaseInterval'] = model.predict(scaler.transform(ml_data[next_purchase_features]))
+                
+                # Calculate predicted next purchase date
+                ml_data['LastPurchaseDate'] = reference_date - pd.to_timedelta(ml_data['Recency'], unit='D')
+                ml_data['PredictedNextPurchaseDate'] = ml_data['LastPurchaseDate'] + pd.to_timedelta(ml_data['PredictedPurchaseInterval'], unit='D')
+                
+                # Calculate days until next purchase
+                ml_data['DaysUntilNextPurchase'] = (ml_data['PredictedNextPurchaseDate'] - reference_date).dt.days
+                
+                # Display customers with imminent purchases
+                st.subheader("Customers with Imminent Purchases")
+                imminent_purchases = ml_data[ml_data['DaysUntilNextPurchase'] > 0].nsmallest(10, 'DaysUntilNextPurchase')[
+                    ['CustomerID', 'LastPurchaseDate', 'PredictedNextPurchaseDate', 'DaysUntilNextPurchase', 'Monetary']
+                ]
+                st.dataframe(imminent_purchases.style.format({
+                    'LastPurchaseDate': '{:%Y-%m-%d}',
+                    'PredictedNextPurchaseDate': '{:%Y-%m-%d}',
+                    'DaysUntilNextPurchase': '{:.0f}',
+                    'Monetary': '${:.2f}'
+                }))
+                
+                # Distribution of days until next purchase
+                fig = px.histogram(
+                    ml_data[ml_data['DaysUntilNextPurchase'] > 0],
+                    x='DaysUntilNextPurchase',
+                    nbins=30,
+                    title='Distribution of Days Until Next Purchase'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Download next purchase predictions
+                st.download_button(
+                    label="Download Next Purchase Predictions",
+                    data=ml_data[['CustomerID', 'LastPurchaseDate', 'PredictedNextPurchaseDate', 'DaysUntilNextPurchase']].to_csv(index=False).encode('utf-8'),
+                    file_name="next_purchase_predictions.csv",
+                    mime="text/csv"
+                )
+
 # Main execution
 if __name__ == "__main__":
-    # Show navigation in sidebar
-    show_navigation()
-    
-    # Show appropriate page based on selection
-    if st.session_state.current_page == "Dashboard":
-        show_dashboard()
-    elif st.session_state.current_page == "Customers":
-        show_customers_analysis()
-    elif st.session_state.current_page == "Revenue":
-        show_revenue_analysis()
-    else:
-        show_rfm_analysis()
+    try:
+        # Show navigation in sidebar
+        show_navigation()
+        
+        # Display the appropriate page based on navigation
+        if st.session_state.current_page == "RFM Analysis":
+            show_rfm_analysis()
+        elif st.session_state.current_page == "Dashboard":
+            show_dashboard()
+        elif st.session_state.current_page == "Customers":
+            show_customers_analysis()
+        elif st.session_state.current_page == "Revenue":
+            show_revenue_analysis()
+        elif st.session_state.current_page == "ML Analysis":
+            show_ml_analysis()
+        else:
+            # Default to RFM Analysis if page not found
+            show_rfm_analysis()
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        st.write("Please check your data and try again.")
+        # Show error details in an expander for debugging
+        with st.expander("Error Details"):
+            st.exception(e)
