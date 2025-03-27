@@ -1103,7 +1103,7 @@ def show_rfm_analysis():
 
     # Update dark theme background color to Pistachio
     new_dark_theme = {
-        'background': 'linear-gradient(135deg, #93c572 0%, #a2d149 100%)',  # Pistachio
+        'background': 'black',  # Pistachio
         'text_color': '#1e293b'
     }
 
