@@ -4,13 +4,17 @@ import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, mean_squared_error, classification_report
+from sklearn.metrics import accuracy_score, mean_squared_error, classification_report, silhouette_score
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from prophet import Prophet
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import pdist
+import matplotlib.pyplot as plt
 
 # Set page configuration
 st.set_page_config(
@@ -1767,11 +1771,13 @@ def show_ml_analysis():
     ml_data = pd.merge(rfm, customer_data, on='CustomerID')
     
     # Create tabs for different ML analyses
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "Advanced Segmentation", 
         "Churn Prediction", 
         "Customer Lifetime Value", 
-        "Next Purchase Prediction"
+        "Next Purchase Prediction",
+        "Time Series Forecasting",
+        "Enhanced Segmentation"
     ])
     
     with tab1:
@@ -2238,6 +2244,285 @@ def show_ml_analysis():
                     file_name="next_purchase_predictions.csv",
                     mime="text/csv"
                 )
+    
+    with tab5:
+        st.markdown('<h3 class="ml-header">Time Series Forecasting</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        Time series forecasting helps predict future sales trends and seasonal patterns in customer behavior.
+        This analysis uses Facebook's Prophet model for accurate time series predictions.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Prepare time series data
+        daily_sales = data.groupby('PurchaseDate')['TransactionAmount'].sum().reset_index()
+        daily_sales.columns = ['ds', 'y']
+        
+        # Prophet parameters
+        growth = st.selectbox("Growth Model", ["linear", "logistic"], index=0)
+        seasonality_mode = st.selectbox("Seasonality Mode", ["additive", "multiplicative"], index=0)
+        forecast_days = st.slider("Forecast Days", min_value=30, max_value=365, value=90)
+        
+        if st.button("Generate Forecast"):
+            with st.spinner("Training Prophet model and generating forecast..."):
+                # Initialize and train Prophet model
+                model = Prophet(
+                    growth=growth,
+                    seasonality_mode=seasonality_mode,
+                    yearly_seasonality=True,
+                    weekly_seasonality=True,
+                    daily_seasonality=False
+                )
+                model.fit(daily_sales)
+                
+                # Create future dates for forecasting
+                future_dates = model.make_future_dataframe(periods=forecast_days)
+                forecast = model.predict(future_dates)
+                
+                # Plot forecast
+                fig = go.Figure()
+                
+                # Actual values
+                fig.add_trace(go.Scatter(
+                    x=daily_sales['ds'],
+                    y=daily_sales['y'],
+                    name='Actual Sales',
+                    mode='markers+lines',
+                    line=dict(color='blue', width=1),
+                    marker=dict(size=4)
+                ))
+                
+                # Predicted values
+                fig.add_trace(go.Scatter(
+                    x=forecast['ds'],
+                    y=forecast['yhat'],
+                    name='Predicted Sales',
+                    mode='lines',
+                    line=dict(color='red', width=2)
+                ))
+                
+                # Confidence interval
+                fig.add_trace(go.Scatter(
+                    x=forecast['ds'].tolist() + forecast['ds'].tolist()[::-1],
+                    y=forecast['yhat_upper'].tolist() + forecast['yhat_lower'].tolist()[::-1],
+                    fill='toself',
+                    fillcolor='rgba(255,0,0,0.1)',
+                    line=dict(color='rgba(255,0,0,0)'),
+                    name='Confidence Interval'
+                ))
+                
+                fig.update_layout(
+                    title='Sales Forecast',
+                    xaxis_title='Date',
+                    yaxis_title='Sales Amount ($)',
+                    showlegend=True
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Display components
+                st.subheader("Trend Components")
+                components_fig = model.plot_components(forecast)
+                st.pyplot(components_fig)
+                
+                # Download forecast data
+                forecast_download = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
+                forecast_download.columns = ['Date', 'Predicted_Sales', 'Lower_Bound', 'Upper_Bound']
+                st.download_button(
+                    label="Download Forecast Data",
+                    data=forecast_download.to_csv(index=False).encode('utf-8'),
+                    file_name="sales_forecast.csv",
+                    mime="text/csv"
+                )
+    
+    with tab6:
+        st.markdown('<h3 class="ml-header">Enhanced Customer Segmentation</h3>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="info-box">
+        Enhanced customer segmentation using advanced clustering techniques including DBSCAN for density-based clustering
+        and Hierarchical Clustering for understanding customer group relationships.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Features for clustering
+        cluster_features = ['Recency', 'Frequency', 'Monetary', 'Tenure', 'ProductVariety', 'AvgOrderValue']
+        
+        # Allow user to select features
+        selected_features = st.multiselect(
+            "Select features for clustering:",
+            options=cluster_features,
+            default=cluster_features[:3]
+        )
+        
+        if not selected_features:
+            st.warning("Please select at least one feature for clustering.")
+        else:
+            # Prepare data for clustering
+            X = ml_data[selected_features].copy()
+            
+            # Scale the data
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            X_scaled_df = pd.DataFrame(X_scaled, columns=selected_features)
+            
+            # Clustering method selection
+            clustering_method = st.radio(
+                "Select Clustering Method:",
+                ["DBSCAN", "Hierarchical Clustering"],
+                horizontal=True
+            )
+            
+            if clustering_method == "DBSCAN":
+                # DBSCAN parameters
+                eps = st.slider(
+                    "Epsilon (neighborhood distance)",
+                    min_value=0.1,
+                    max_value=2.0,
+                    value=0.5,
+                    step=0.1
+                )
+                min_samples = st.slider(
+                    "Minimum samples in neighborhood",
+                    min_value=2,
+                    max_value=20,
+                    value=5
+                )
+                
+                if st.button("Run DBSCAN Clustering"):
+                    with st.spinner("Performing DBSCAN clustering..."):
+                        # Apply DBSCAN
+                        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+                        clusters = dbscan.fit_predict(X_scaled)
+                        
+                        # Add cluster labels to data
+                        ml_data['Cluster'] = clusters
+                        
+                        # Calculate silhouette score for non-noise points
+                        non_noise_mask = clusters != -1
+                        if len(np.unique(clusters[non_noise_mask])) > 1:
+                            silhouette_avg = silhouette_score(
+                                X_scaled[non_noise_mask],
+                                clusters[non_noise_mask]
+                            )
+                            st.success(f"Silhouette Score: {silhouette_avg:.3f}")
+                        
+                        # Display cluster statistics
+                        st.subheader("Cluster Statistics")
+                        cluster_stats = ml_data.groupby('Cluster').agg({
+                            'CustomerID': 'count',
+                            **{feature: 'mean' for feature in selected_features}
+                        }).round(2)
+                        cluster_stats.columns = ['Count'] + selected_features
+                        st.dataframe(cluster_stats)
+                        
+                        # Visualize clusters
+                        if len(selected_features) >= 2:
+                            st.subheader("Cluster Visualization")
+                            
+                            # Select dimensions for visualization
+                            x_axis = st.selectbox("X-axis:", options=selected_features, index=0)
+                            y_axis = st.selectbox("Y-axis:", options=selected_features, index=1)
+                            
+                            # Create scatter plot
+                            fig = px.scatter(
+                                ml_data, x=x_axis, y=y_axis,
+                                color='Cluster',
+                                title=f'DBSCAN Clusters based on {x_axis} and {y_axis}',
+                                color_continuous_scale=px.colors.qualitative.Set1
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # 3D visualization if available
+                            if len(selected_features) >= 3:
+                                z_axis = st.selectbox("Z-axis (for 3D):", options=selected_features, index=2)
+                                fig_3d = px.scatter_3d(
+                                    ml_data, x=x_axis, y=y_axis, z=z_axis,
+                                    color='Cluster',
+                                    title=f'3D DBSCAN Clusters'
+                                )
+                                st.plotly_chart(fig_3d, use_container_width=True)
+            
+            else:  # Hierarchical Clustering
+                # Linkage method selection
+                linkage_method = st.selectbox(
+                    "Select Linkage Method:",
+                    ["ward", "complete", "average", "single"]
+                )
+                
+                n_clusters = st.slider(
+                    "Number of Clusters",
+                    min_value=2,
+                    max_value=10,
+                    value=5
+                )
+                
+                if st.button("Run Hierarchical Clustering"):
+                    with st.spinner("Performing hierarchical clustering..."):
+                        # Calculate linkage matrix
+                        linkage_matrix = linkage(X_scaled, method=linkage_method)
+                        
+                        # Plot dendrogram
+                        st.subheader("Dendrogram")
+                        fig, ax = plt.subplots(figsize=(10, 7))
+                        dendrogram(linkage_matrix, ax=ax)
+                        plt.title("Hierarchical Clustering Dendrogram")
+                        plt.xlabel("Sample Index")
+                        plt.ylabel("Distance")
+                        st.pyplot(fig)
+                        
+                        # Cut the dendrogram to get clusters
+                        from scipy.cluster.hierarchy import fcluster
+                        clusters = fcluster(linkage_matrix, n_clusters, criterion='maxclust')
+                        ml_data['Cluster'] = clusters - 1  # 0-based indexing
+                        
+                        # Calculate silhouette score
+                        silhouette_avg = silhouette_score(X_scaled, clusters)
+                        st.success(f"Silhouette Score: {silhouette_avg:.3f}")
+                        
+                        # Display cluster statistics
+                        st.subheader("Cluster Statistics")
+                        cluster_stats = ml_data.groupby('Cluster').agg({
+                            'CustomerID': 'count',
+                            **{feature: 'mean' for feature in selected_features}
+                        }).round(2)
+                        cluster_stats.columns = ['Count'] + selected_features
+                        st.dataframe(cluster_stats)
+                        
+                        # Visualize clusters
+                        if len(selected_features) >= 2:
+                            st.subheader("Cluster Visualization")
+                            
+                            # Select dimensions for visualization
+                            x_axis = st.selectbox("X-axis:", options=selected_features, index=0)
+                            y_axis = st.selectbox("Y-axis:", options=selected_features, index=1)
+                            
+                            # Create scatter plot
+                            fig = px.scatter(
+                                ml_data, x=x_axis, y=y_axis,
+                                color='Cluster',
+                                title=f'Hierarchical Clusters based on {x_axis} and {y_axis}',
+                                color_continuous_scale=px.colors.qualitative.Set1
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # 3D visualization if available
+                            if len(selected_features) >= 3:
+                                z_axis = st.selectbox("Z-axis (for 3D):", options=selected_features, index=2)
+                                fig_3d = px.scatter_3d(
+                                    ml_data, x=x_axis, y=y_axis, z=z_axis,
+                                    color='Cluster',
+                                    title=f'3D Hierarchical Clusters'
+                                )
+                                st.plotly_chart(fig_3d, use_container_width=True)
+            
+            # Download clustered data
+            st.download_button(
+                label="Download Clustered Data",
+                data=ml_data.to_csv(index=False).encode('utf-8'),
+                file_name="customer_clusters_enhanced.csv",
+                mime="text/csv"
+            )
 
 # Main execution
 if __name__ == "__main__":
